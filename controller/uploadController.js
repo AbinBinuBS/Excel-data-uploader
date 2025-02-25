@@ -17,13 +17,21 @@ export const UploadService = async (req, res) => {
             const imagePaths = findImage(itemId); 
             let existingItem = await Item.findOne({ name: row.NAME });
             if (existingItem) {
-                existingItem.variants.push({
-                    itemId,
-                    itemName: row["ITEM NAME"] || "",
-                    quantity: Number(row["QUANTITY"]) || 0,
-                    images: imagePaths && imagePaths.length > 0 ? imagePaths : ["bit.ly/3Pb7wpV"], 
-                    hsnCode: row["HSN CODE"] || ""
-                });
+                let variantIndex = existingItem.variants.findIndex(variant => variant.itemId.toString() === itemId.toString());
+                if (variantIndex !== -1) {
+                    existingItem.variants[variantIndex].itemName = row["ITEM NAME"] || existingItem.variants[variantIndex].itemName;
+                    existingItem.variants[variantIndex].quantity = Number(row["QUANTITY"]) || existingItem.variants[variantIndex].quantity;
+                    existingItem.variants[variantIndex].images = imagePaths && imagePaths.length > 0 ? imagePaths : existingItem.variants[variantIndex].images;
+                    existingItem.variants[variantIndex].hsnCode = row["HSN CODE"] || existingItem.variants[variantIndex].hsnCode;
+                } else {
+                    existingItem.variants.push({
+                        itemId,
+                        itemName: row["ITEM NAME"] || "",
+                        quantity: Number(row["QUANTITY"]) || 0,
+                        images: imagePaths && imagePaths.length > 0 ? imagePaths : ["bit.ly/3Pb7wpV"],
+                        hsnCode: row["HSN CODE"] || ""
+                    });
+                }
                 await existingItem.save();
             } else {
                 const newItem = new Item({
@@ -33,7 +41,7 @@ export const UploadService = async (req, res) => {
                     shelfLife: Number(row["SHELF LIFE"]) || null,
                     manufacturer: row.MANUFACTURER || "",
                     brand: row.BRAND || "",
-                    tags: row.TAGS ? row.TAGS.split(",").map(tag => tag.trim()) : [], 
+                    tags: row.TAGS ? row.TAGS.split(",").map(tag => tag.trim()) : [],
                     variants: [
                         {
                             itemId,
@@ -54,4 +62,3 @@ export const UploadService = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
-
